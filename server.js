@@ -4,8 +4,14 @@ const db = require("./firebase-admin");
 
 const app = express();
 
-const servidor = app.listen(3000, () => {
-    console.log("Servidor iniciado en el puerto 3000");
+app.get("/", (req, res) => {
+    res.send("Servidor Willay activo");
+});
+
+const PORT = process.env.PORT || 3000;
+
+const servidor = app.listen(PORT, () => {
+    console.log("Servidor iniciado en el puerto " + PORT);
 });
 
 const wss = new WebSocket.Server({
@@ -23,6 +29,19 @@ wss.on("connection", (ws) => {
             const datos = JSON.parse(mensaje.toString());
 
             console.log("Mensaje recibido:", datos);
+
+            if(datos.tipo === "UID"){
+
+                console.log("UID recibido desde app:", datos.uid);
+
+                wss.clients.forEach(cliente => {
+                    if(cliente.readyState === WebSocket.OPEN){
+                        cliente.send(JSON.stringify(datos));
+                    }
+                });
+
+                return;
+            }
 
             if(datos.tipo === "RFID"){
 
@@ -49,10 +68,7 @@ wss.on("connection", (ws) => {
                         porcentaje:
                         (datos.aciertos + datos.errores) === 0
                         ? 0
-                        : Math.round(
-                            datos.aciertos /
-                            (datos.aciertos + datos.errores) * 100
-                        ),
+                        : Math.round(datos.aciertos / (datos.aciertos + datos.errores) * 100),
 
                         dispositivo: "ESP32",
                         version: "1.0"
@@ -66,6 +82,7 @@ wss.on("connection", (ws) => {
                     mensaje: "Practica guardada"
                 }));
 
+                return;
             }
 
         } catch(error) {
